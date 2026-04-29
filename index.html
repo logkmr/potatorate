@@ -119,6 +119,9 @@ padding:8px 10px;display:flex;align-items:flex-start;gap:8px;animation:si .18s e
 .pt-del{background:none;border:none;color:var(–muted);cursor:pointer;font-size:16px;line-height:1;padding:0;transition:color .15s}
 .pt-del:hover{color:var(–ax)}
 .pt-del:disabled{opacity:.4;cursor:not-allowed}
+.pt-edit{background:none;border:none;color:var(–muted);cursor:pointer;font-size:14px;line-height:1;padding:0;transition:color .15s;margin-right:6px}
+.pt-edit:hover{color:var(–ay)}
+.pt-edit:disabled{opacity:.4;cursor:not-allowed}
 
 /* stats */
 #stats{
@@ -394,6 +397,11 @@ async function apiAdd(p){
   if(!r.ok)throw new Error(await r.text());
   return r.json();
 }
+async function apiUpdate(id, p){
+  const r=await fetch(`${API}?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
 async function apiDel(id){
   const r=await fetch(`${API}?id=${id}`,{method:'DELETE'});
   if(!r.ok)throw new Error(await r.text());
@@ -439,6 +447,7 @@ function setBusy(busy){
   document.getElementById('btn-add').disabled=busy;
   document.getElementById('m-add').disabled=busy;
   document.querySelectorAll('.pt-del').forEach(b=>b.disabled=busy);
+  document.querySelectorAll('.pt-edit').forEach(b=>b.disabled=busy);
 }
 
 async function loadPoints(){
@@ -461,19 +470,36 @@ async function loadPoints(){
   }
 }
 
+let editId = null;
+
 async function addPoint(v,fa,g,name,color,size){
   setBusy(true);
   setStatus('⏳ сохраняю…','loading');
   try{
-    const p=await apiAdd({
-      v,fa,g,
-      name:name||('P'+(points.length+1)),
-      color:color||PALETTE[autoCI++%PALETTE.length],
-      size:size||4
-    });
-    const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;
-    points.push(p);
-    setStatus('✓ сохранено','ok');
+    if(editId) {
+      const p=await apiUpdate(editId, {v,fa,g,name:name||('P'+points.length),color:color||PALETTE[autoCI%PALETTE.length],size:size||4});
+      const idx=points.findIndex(x=>x.id===editId);
+      if(idx!==-1){
+        removeSceneObjects(points[idx]);
+        const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;
+        points[idx]=p;
+      }
+      setStatus('✓ обновлено','ok');
+      editId = null;
+      document.getElementById('btn-add').textContent = '+ Добавить';
+      document.getElementById('m-add').textContent = '+ Добавить точку';
+      document.querySelectorAll('.sec-title')[0].textContent = 'Новая точка';
+    } else {
+      const p=await apiAdd({
+        v,fa,g,
+        name:name||('P'+(points.length+1)),
+        color:color||PALETTE[autoCI++%PALETTE.length],
+        size:size||4
+      });
+      const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;
+      points.push(p);
+      setStatus('✓ сохранено','ok');
+    }
     renderAll();
   }catch(e){
     setStatus('⚠ ошибка сохранения','err');
@@ -488,6 +514,12 @@ async function delPoint(id){
     await apiDel(id);
     const idx=points.findIndex(p=>p.id===id);
     if(idx!==-1){removeSceneObjects(points[idx]);points.splice(idx,1);}
+    if(editId===id){
+      editId = null;
+      document.getElementById('btn-add').textContent = '+ Добавить';
+      document.getElementById('m-add').textContent = '+ Добавить точку';
+      document.querySelectorAll('.sec-title')[0].textContent = 'Новая точка';
+    }
     setStatus('✓ удалено','ok');
     renderAll();
   }catch(e){
@@ -504,6 +536,10 @@ async function clearAll(){
     await Promise.all(points.map(p=>apiDel(p.id)));
     points.forEach(p=>removeSceneObjects(p));
     points=[];autoCI=0;
+    editId = null;
+    document.getElementById('btn-add').textContent = '+ Добавить';
+    document.getElementById('m-add').textContent = '+ Добавить точку';
+    document.querySelectorAll('.sec-title')[0].textContent = 'Новая точка';
     setStatus('✓ очищено','ok');
     renderAll();
   }catch(e){
@@ -537,20 +573,49 @@ function ptHTML(p){
         <s style="color:var(--az)">G=${p.g}</s>
       </div>
     </div>
+    <button class="pt-edit" data-id="${p.id}">✎</button>
     <button class="pt-del" data-id="${p.id}">×</button>
   </div>`;
 }
 
-function bindDels(root){
+function startEdit(id){
+  const p = points.find(x=>x.id===id);
+  if(!p) return;
+  editId = id;
+  
+  // Update desktop form
+  document.getElementById('in-name').value = p.name;
+  document.getElementById('in-v').value = p.v;
+  document.getElementById('in-fa').value = p.fa;
+  document.getElementById('in-g').value = p.g;
+  document.getElementById('in-col').value = p.color;
+  document.getElementById('in-sz').value = p.size || 4;
+  document.getElementById('size-val').textContent = p.size || 4;
+  document.getElementById('btn-add').textContent = '✓ Сохранить';
+  document.querySelectorAll('.sec-title')[0].textContent = 'Редактировать точку';
+  
+  // Update mobile form
+  document.getElementById('m-name').value = p.name;
+  document.getElementById('m-v').value = p.v;
+  document.getElementById('m-fa').value = p.fa;
+  document.getElementById('m-g').value = p.g;
+  document.getElementById('m-col').value = p.color;
+  document.getElementById('m-add').textContent = '✓ Сохранить точку';
+  
+  if(window.innerWidth <= 640) switchSheetTab('add');
+}
+
+function bindActions(root){
   root.querySelectorAll('.pt-del').forEach(b=>b.addEventListener('click',()=>delPoint(b.dataset.id)));
+  root.querySelectorAll('.pt-edit').forEach(b=>b.addEventListener('click',()=>startEdit(b.dataset.id)));
 }
 
 function renderLists(){
   const el1=document.getElementById('pts-list');
   const el2=document.getElementById('m-pts');
   const html=points.length?points.map(ptHTML).join(''):'<div class="empty">Нет точек</div>';
-  if(el1){el1.innerHTML=html;bindDels(el1);}
-  if(el2){el2.innerHTML=html;bindDels(el2);}
+  if(el1){el1.innerHTML=html;bindActions(el1);}
+  if(el2){el2.innerHTML=html;bindActions(el2);}
   document.getElementById('cnt').textContent=points.length;
   document.getElementById('m-cnt').textContent=points.length;
 }

@@ -1,5 +1,5 @@
 // netlify/functions/points.js
-// Handles GET /api/points, POST /api/points, DELETE /api/points?id=...
+// Handles GET /api/points, POST /api/points, PUT /api/points?id=..., DELETE /api/points?id=...
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -12,7 +12,7 @@ const HEADERS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
 exports.handler = async (event) => {
@@ -46,6 +46,25 @@ exports.handler = async (event) => {
 
       if (error) throw error;
       return { statusCode: 201, headers: HEADERS, body: JSON.stringify(data) };
+    }
+
+    // ── PUT: update a point ───────────────────────────
+    if (event.httpMethod === 'PUT') {
+      const id = event.queryStringParameters?.id;
+      if (!id) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) };
+
+      const body = JSON.parse(event.body || '{}');
+      const { name, v, fa, g, color, size } = body;
+
+      const { data, error } = await supabase
+        .from('points')
+        .update({ name, v, fa, g, color, size })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { statusCode: 200, headers: HEADERS, body: JSON.stringify(data) };
     }
 
     // ── DELETE: remove a point by id ──────────────────
