@@ -26,7 +26,7 @@ display:flex;align-items:center;gap:8px;padding:9px 12px;
 background:var(--surface);border-bottom:1px solid var(--border);
 flex-shrink:0;z-index:20;
 }
-#topbar h1{font-family:‘Syne’,sans-serif;font-size:14px;font-weight:800}
+#topbar h1{font-family:‘Syne’,sans-serif;font-size:14px;font-weight:800;flex:1}
 #topbar h1 span{color:var(--ax)}
 .tb-btn{
 background:none;border:1.5px solid var(--border2);border-radius:6px;
@@ -34,13 +34,14 @@ color:var(--text);font-size:11px;font-family:‘DM Mono’,monospace;
 padding:5px 10px;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;
 }
 .tb-btn:hover{border-color:var(--ax);background:#d4450c0d}
-.tb-btn.on{border-color:var(--ax);background:#d4450c10;color:var(--ax)}
-.tb-btn.danger{border-color:#d4450c44;color:#d4450c}
-.tb-btn.danger:hover{background:#d4450c10}
+.tb-btn.active, .tb-btn.on{border-color:var(--ax);background:#d4450c10;color:var(--ax)}
 
 /* toggle switch */
 .pkg-tgl{
-display:flex;align-items:center;gap:6px;font-size:11px;font-family:'Syne',sans-serif;font-weight:800;color:var(--text);margin-right:auto;
+display:flex;align-items:center;gap:6px;font-size:11px;font-family:'Syne',sans-serif;font-weight:800;color:var(--text);
+}
+.float-tgl{
+position:absolute;bottom:16px;left:16px;background:var(--surface);padding:6px 12px 6px 8px;border-radius:20px;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.08);z-index:20;
 }
 .switch{position:relative;display:inline-block;width:34px;height:20px;}
 .switch input{opacity:0;width:0;height:0;}
@@ -257,10 +258,11 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
 @media(max-width:640px){
 #rp{display:none}
 #mob-nav{display:flex}
-#fab{display:none}
+.float-tgl{bottom:calc(70px + env(safe-area-inset-bottom,0px));left:12px}
 #hint{display:none}
 #stats{display:none}
 #status{display:none}
+#t-panel, #t-stats {display:none}
 }
 </style>
 
@@ -272,13 +274,16 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
     <div id="status" class="loading">⏳ загрузка…</div>
     <button class="tb-btn on" id="t-panel">☰ Список</button>
     <button class="tb-btn" id="t-stats">▲ Топ</button>
-    <button class="tb-btn danger" id="t-clear">✕ Очистить</button>
   </div>
 
   <div id="middle">
     <div id="canvas-wrap">
       <canvas id="c"></canvas>
       <div id="hint">ЛКМ — вращение · Колесо — масштаб · ПКМ — панорама</div>
+      <label class="pkg-tgl float-tgl">
+        <div class="switch"><input type="checkbox" id="tgl-pkg"><span class="slider"></span></div>
+        С пакетом
+      </label>
     </div>
 
 <div id="rp">
@@ -629,28 +634,6 @@ async function delPoint(id){
   }finally{setBusy(false);}
 }
 
-async function clearAll(){
-  if(!points.length)return;
-  setBusy(true);
-  setStatus('⏳ очищаю…','loading');
-  try{
-    await Promise.all(points.map(p=>apiDel(p.id)));
-    points.forEach(p=>removeSceneObjects(p));
-    points=[];autoCI=0;
-    editId = null;
-      document.getElementById('btn-add').textContent = '+ Добавить';
-      document.getElementById('m-add').textContent = '+ Добавить точку';
-      document.querySelectorAll('.sec-title')[0].textContent = 'Новая точка';
-      document.getElementById('m-add-title').textContent = 'Новая точка';
-      document.getElementById('m-add-title').textContent = 'Новая точка';
-    setStatus('✓ очищено','ok');
-    renderAll();
-  }catch(e){
-    setStatus('⚠ ошибка','err');
-    console.error(e);
-  }finally{setBusy(false);}
-}
-
 /* ═══════════════════════════
    STATS STATE
 ═══════════════════════════ */
@@ -722,7 +705,9 @@ function startEdit(id){
 }
 
 function bindActions(root){
-  root.querySelectorAll('.pt-del').forEach(b=>b.addEventListener('click',()=>delPoint(b.dataset.id)));
+  root.querySelectorAll('.pt-del').forEach(b=>b.addEventListener('click',()=>{
+    if(confirm('Удалить эту точку?')) delPoint(b.dataset.id);
+  }));
   root.querySelectorAll('.pt-edit').forEach(b=>b.addEventListener('click',()=>startEdit(b.dataset.id)));
 }
 
@@ -839,9 +824,6 @@ document.getElementById('t-stats').addEventListener('click',()=>{
   document.getElementById('t-stats').classList.toggle('on',statsOn);
   if(statsOn)renderDesktopStats();
   setTimeout(resize,320);
-});
-document.getElementById('t-clear').addEventListener('click',()=>{
-  if(!points.length||confirm('Удалить все '+points.length+' точек?'))clearAll();
 });
 
 function switchSheetTab(tab){
