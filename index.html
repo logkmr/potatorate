@@ -3,7 +3,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>potatoRate</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
@@ -62,7 +62,7 @@ border:1px solid var(--border);color:var(--muted);transition:all .3s;
 /* middle */
 #middle{display:flex;flex:1;overflow:hidden;position:relative}
 #canvas-wrap{flex:1;position:relative;min-width:0}
-canvas{display:block;width:100%!important;height:100%!important}
+canvas{display:block;width:100%!important;height:100%!important;touch-action:none}
 
 /* right panel */
 #rp{
@@ -482,9 +482,11 @@ canvas.addEventListener('wheel',e=>{camR=Math.max(1,camR+e.deltaY*.03);updCam();
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 let ld=null;
 canvas.addEventListener('touchstart',e=>{
+  // iOS Safari: prevent page zoom/scroll while interacting with canvas
+  e.preventDefault();
   if(e.touches.length===1){drag=true;wasDragged=false;rclick=false;prev={x:e.touches[0].clientX,y:e.touches[0].clientY};}
   else if(e.touches.length===2)ld=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-},{passive:true});
+},{passive:false});
 canvas.addEventListener('touchend',e=>{
   drag=false;ld=null;
   if(!wasDragged && e.changedTouches.length===1 && e.target===canvas){
@@ -510,8 +512,9 @@ canvas.addEventListener('touchend',e=>{
       document.getElementById('photo-popup').style.display = 'none';
     }
   }
-});
+},{passive:false});
 canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
   if(e.touches.length===1&&drag){
     wasDragged=true;
     const dx=e.touches[0].clientX-prev.x,dy=e.touches[0].clientY-prev.y;
@@ -521,7 +524,7 @@ canvas.addEventListener('touchmove',e=>{
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
     if(ld){camR=Math.max(1,camR-(d-ld)*.07);updCam();}ld=d;
   }
-},{passive:true});
+},{passive:false});
 (function loop(){requestAnimationFrame(loop);renderer.render(scene,camera)})();
 
 /* ═══════════════════════════
