@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>3D Point Plotter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ede8;--surface:#faf9f7;--surface2:#eeebe5;
+  --border:#ddd9d2;--border2:#c8c3bb;
+  --text:#1a1714;--muted:#8a857e;
+  --ax:#d4450c;--ay:#1a6e3c;--az:#1a3d8a;--aavg:#7b2d8b;
+  --ok:#1a6e3c;--err:#d4450c;
+  --shadow:0 2px 12px rgba(0,0,0,.10);
+}
+html,body{width:100%;height:100%;background:var(--bg);font-family:'DM Mono',monospace;color:var(--text);overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+
+/* topbar */
+#topbar{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;z-index:20;
+}
+#topbar h1{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;flex:1}
+#topbar h1 span{color:var(--ax)}
+.tb-btn{
+  background:none;border:1.5px solid var(--border2);border-radius:6px;
+  color:var(--text);font-size:11px;font-family:'DM Mono',monospace;
+  padding:5px 10px;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;
+}
+.tb-btn:hover{border-color:var(--ax);background:#d4450c0d}
+.tb-btn.on{border-color:var(--ax);background:#d4450c10;color:var(--ax)}
+.tb-btn.danger{border-color:#d4450c44;color:#d4450c}
+.tb-btn.danger:hover{background:#d4450c10}
+
+/* status pill */
+#status{
+  font-size:10px;padding:3px 9px;border-radius:12px;white-space:nowrap;flex-shrink:0;
+  border:1px solid var(--border);color:var(--muted);transition:all .3s;
+}
+#status.ok{color:var(--ok);border-color:#1a6e3c44;background:#1a6e3c0a}
+#status.err{color:var(--err);border-color:#d4450c44;background:#d4450c0a}
+#status.loading{color:var(--muted);border-color:var(--border)}
+
+/* middle */
+#middle{display:flex;flex:1;overflow:hidden;position:relative}
+#canvas-wrap{flex:1;position:relative;min-width:0}
+canvas{display:block;width:100%!important;height:100%!important}
+
+/* right panel */
+#rp{
+  width:264px;background:var(--surface);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:width .25s ease;flex-shrink:0;
+}
+#rp.collapsed{width:0;border-left-width:0}
+.rp-sec{border-bottom:1px solid var(--border);padding:14px}
+.sec-title{
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:11px;
+}
+.field{margin-bottom:9px}
+.field label{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);margin-bottom:4px}
+.field label b{font-family:'Syne',sans-serif;font-size:13px;font-weight:800}
+.vx{color:var(--ax)}.vy{color:var(--ay)}.vz{color:var(--az)}
+input[type=text],input[type=number]{
+  width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;
+  font-size:13px;padding:7px 9px;outline:none;
+  transition:border-color .15s,box-shadow .15s;-moz-appearance:textfield;
+}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+input:focus{border-color:var(--ax);box-shadow:0 0 0 3px #d4450c18}
+.row2{display:flex;gap:7px}
+.row2 .field{flex:1}
+input[type=color]{
+  -webkit-appearance:none;width:100%;height:34px;
+  border:1.5px solid var(--border);border-radius:6px;
+  background:none;cursor:pointer;padding:3px;
+}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:4px}
+input[type=range]{width:100%;accent-color:var(--ax);margin-top:6px}
+#size-val{font-size:11px;color:var(--ax);min-width:14px}
+#btn-add{
+  width:100%;margin-top:6px;background:var(--text);border:none;border-radius:7px;
+  color:var(--bg);font-family:'Syne',sans-serif;font-weight:800;font-size:12px;
+  letter-spacing:.5px;padding:10px;cursor:pointer;transition:background .15s,transform .1s;
+}
+#btn-add:hover{background:#333}
+#btn-add:active{transform:scale(.98)}
+#btn-add:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* points list */
+#pts-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
+#pts-list{
+  flex:1;overflow-y:auto;padding:6px 10px 10px;
+  display:flex;flex-direction:column;gap:5px;
+}
+#pts-list::-webkit-scrollbar{width:3px}
+#pts-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.empty{text-align:center;font-size:11px;color:var(--muted);padding:16px 0}
+.pt-item{
+  background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;
+  padding:8px 10px;display:flex;align-items:flex-start;gap:8px;animation:si .18s ease;
+}
+@keyframes si{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.pt-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;margin-top:3px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.pt-info{flex:1;min-width:0}
+.pt-name{font-family:'Syne',sans-serif;font-weight:800;font-size:12px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pt-coords{font-size:10px;color:var(--muted)}
+.pt-coords s{margin-right:5px;font-style:normal;text-decoration:none}
+.pt-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0;transition:color .15s}
+.pt-del:hover{color:var(--ax)}
+.pt-del:disabled{opacity:.4;cursor:not-allowed}
+
+/* stats */
+#stats{
+  background:var(--surface);border-top:1px solid var(--border);
+  flex-shrink:0;overflow:hidden;max-height:0;transition:max-height .3s ease;
+}
+#stats.open{max-height:230px}
+.stats-inner{padding:10px 14px 12px}
+.stats-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.stats-hdr .sec-title{margin:0;flex:1}
+.tab-row{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.tab-btn{
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:800;
+  padding:4px 10px;border-radius:20px;border:1.5px solid var(--border2);
+  background:none;cursor:pointer;transition:all .15s;color:var(--muted);white-space:nowrap;
+}
+.tab-btn.active{color:#fff;border-color:transparent}
+.rank-list{display:flex;flex-direction:column;gap:5px;overflow-y:auto;max-height:140px}
+.rank-list::-webkit-scrollbar{width:3px}
+.rank-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.ri{
+  display:flex;align-items:center;gap:8px;animation:fi .18s ease;
+  padding:5px 8px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);
+}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.rn{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;width:18px;text-align:center;flex-shrink:0}
+.gold{color:#c9920a}.silver{color:#888}.bronze{color:#a0603a}.dim{color:var(--muted)}
+.rd{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.rname{font-size:12px;font-family:'Syne',sans-serif;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rval-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.rval{font-size:12px;font-weight:500;padding:2px 7px;border-radius:5px;color:#fff}
+.rbar-wrap{width:50px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.rbar{height:100%;border-radius:2px;transition:width .4s ease}
+
+/* hint */
+#hint{
+  position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+  font-size:10px;color:var(--muted);white-space:nowrap;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:4px 12px;pointer-events:none;opacity:.75;
+}
+
+/* FAB */
+#fab{
+  display:none;position:fixed;bottom:20px;right:16px;z-index:30;
+  width:52px;height:52px;border-radius:50%;
+  background:var(--text);border:none;color:var(--bg);
+  font-size:24px;cursor:pointer;box-shadow:var(--shadow);
+  align-items:center;justify-content:center;transition:transform .15s;
+}
+#fab:active{transform:scale(.92)}
+
+/* mobile sheet */
+#mob{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.35);align-items:flex-end}
+#mob.open{display:flex}
+.sheet{width:100%;background:var(--surface);border-radius:18px 18px 0 0;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,16px)}
+.handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 14px}
+.sheet-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.stab{
+  flex:1;padding:11px 6px;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;
+  text-align:center;background:none;border:none;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .15s;
+}
+.stab.active{color:var(--ax);border-bottom-color:var(--ax)}
+.sheet-page{display:none;padding:16px}
+.sheet-page.active{display:block}
+.m-add-btn{
+  width:100%;margin-top:10px;background:var(--text);border:none;border-radius:8px;
+  color:var(--bg);font-family:'Syne',sans-serif;font-weight:800;font-size:13px;padding:13px;cursor:pointer;
+}
+.m-add-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* mobile stats */
+.mob-stats-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.mob-tab-row{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
+.mob-rank-list{display:flex;flex-direction:column;gap:6px}
+.mob-ri{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ease;
+}
+.mob-ri .rn{font-size:14px;width:20px}
+.mob-ri .rd{width:13px;height:13px}
+.mob-ri .rname{font-size:13px}
+.mob-ri .rval-wrap{gap:3px}
+.mob-ri .rval{font-size:13px;padding:3px 9px}
+.mob-ri .rbar-wrap{width:60px;height:4px}
+
+/* spinner */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--ax);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:640px){
+  #rp{display:none}
+  #fab{display:flex}
+  #hint{display:none}
+  #stats{display:none}
+  #status{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>3D <span>Points</span></h1>
+    <div id="status" class="loading">⏳ загрузка…</div>
+    <button class="tb-btn on" id="t-panel">☰ Список</button>
+    <button class="tb-btn" id="t-stats">▲ Топ</button>
+    <button class="tb-btn danger" id="t-clear">✕ Очистить</button>
+  </div>
+
+  <div id="middle">
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+      <div id="hint">ЛКМ — вращение · Колесо — масштаб · ПКМ — панорама</div>
+    </div>
+
+    <div id="rp">
+      <div class="rp-sec">
+        <div class="sec-title">Новая точка</div>
+        <div class="field"><label>Название</label><input type="text" id="in-name" placeholder="Точка 1" maxlength="24"></div>
+        <div class="row2">
+          <div class="field"><label><b class="vx">V</b> X</label><input type="number" id="in-v" value="0" step="any"></div>
+          <div class="field"><label><b class="vy">Fₐ</b> Y</label><input type="number" id="in-fa" value="0" step="any"></div>
+        </div>
+        <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="in-g" value="0" step="any"></div>
+        <div class="row2">
+          <div class="field"><label>Цвет</label><input type="color" id="in-col" value="#d4450c"></div>
+          <div class="field"><label>Размер &nbsp;<span id="size-val">4</span></label><input type="range" id="in-sz" min="1" max="10" value="4"></div>
+        </div>
+        <button id="btn-add">+ Добавить</button>
+      </div>
+      <div id="pts-wrap">
+        <div style="padding:10px 14px 4px;flex-shrink:0">
+          <div class="sec-title" style="margin:0">Точки <span id="cnt" style="color:var(--ax);font-family:Syne,sans-serif">0</span></div>
+        </div>
+        <div id="pts-list"><div class="empty">Загрузка…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats">
+    <div class="stats-inner">
+      <div class="stats-hdr">
+        <div class="sec-title">🏆 Топ по параметрам</div>
+        <div id="s-cnt" style="font-size:10px;color:var(--muted)"></div>
+      </div>
+      <div class="tab-row" id="d-tabs"></div>
+      <div class="rank-list" id="d-rank"></div>
+    </div>
+  </div>
+</div>
+
+<button id="fab">+</button>
+
+<div id="mob">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="sheet-tabs">
+      <button class="stab active" data-tab="add">+ Добавить</button>
+      <button class="stab" data-tab="list">Точки (<span id="m-cnt">0</span>)</button>
+      <button class="stab" data-tab="top">🏆 Топ</button>
+    </div>
+    <div class="sheet-page active" id="sp-add">
+      <div class="field"><label>Название</label><input type="text" id="m-name" placeholder="Точка 1" maxlength="24"></div>
+      <div class="row2">
+        <div class="field"><label><b class="vx">V</b> X</label><input type="number" id="m-v" value="0" step="any"></div>
+        <div class="field"><label><b class="vy">Fₐ</b> Y</label><input type="number" id="m-fa" value="0" step="any"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="m-g" value="0" step="any"></div>
+        <div class="field"><label>Цвет</label><input type="color" id="m-col" value="#1a3d8a"></div>
+      </div>
+      <button class="m-add-btn" id="m-add">+ Добавить точку</button>
+    </div>
+    <div class="sheet-page" id="sp-list">
+      <div id="m-pts" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div class="sheet-page" id="sp-top">
+      <div class="mob-stats-hdr">
+        <div class="sec-title" style="margin:0;flex:1">🏆 Топ по параметрам</div>
+        <div id="m-s-cnt" style="font-size:10px;color:var(--muted)"></div>
+      </div>
+      <div class="mob-tab-row" id="m-tabs"></div>
+      <div class="mob-rank-list" id="m-rank"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════
+   THREE.JS SCENE
+═══════════════════════════ */
+const canvas=document.getElementById('c');
+const wrap=document.getElementById('canvas-wrap');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0xf0ede8,1);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(55,1,.01,10000);
+let sph={th:.7,ph:.9},camR=22,tgt=new THREE.Vector3();
+
+function resize(){const w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+resize();window.addEventListener('resize',resize);
+
+scene.add(new THREE.GridHelper(20,20,0xc8c3bb,0xddd9d2));
+function axLine(d,c,l=10){return new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),d.clone().multiplyScalar(l)]),new THREE.LineBasicMaterial({color:c}));}
+scene.add(axLine(new THREE.Vector3(1,0,0),0xd4450c));
+scene.add(axLine(new THREE.Vector3(0,1,0),0x1a6e3c));
+scene.add(axLine(new THREE.Vector3(0,0,1),0x1a3d8a));
+function axLabel(txt,pos,col){
+  const cv=document.createElement('canvas');cv.width=220;cv.height=70;
+  const ctx=cv.getContext('2d');ctx.font='bold 28px Syne,sans-serif';ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,110,35);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false}));
+  sp.scale.set(2,.63,1);sp.position.copy(pos);scene.add(sp);
+}
+axLabel('V (X)',new THREE.Vector3(11.5,0,0),'#d4450c');
+axLabel('Fa (Y)',new THREE.Vector3(0,11.5,0),'#1a6e3c');
+axLabel('G (Z)',new THREE.Vector3(0,0,11.5),'#1a3d8a');
+
+function updCam(){
+  camera.position.set(tgt.x+camR*Math.sin(sph.ph)*Math.sin(sph.th),tgt.y+camR*Math.cos(sph.ph),tgt.z+camR*Math.sin(sph.ph)*Math.cos(sph.th));
+  camera.lookAt(tgt);
+}
+updCam();
+
+let drag=false,rclick=false,prev={x:0,y:0};
+canvas.addEventListener('mousedown',e=>{drag=true;rclick=e.button===2;prev={x:e.clientX,y:e.clientY}});
+window.addEventListener('mouseup',()=>drag=false);
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-prev.x,dy=e.clientY-prev.y;prev={x:e.clientX,y:e.clientY};
+  if(!rclick){sph.th-=dx*.005;sph.ph=Math.max(.05,Math.min(Math.PI-.05,sph.ph+dy*.005));}
+  else{const r=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();tgt.addScaledVector(r,-dx*.015);tgt.addScaledVector(camera.up,dy*.015);}
+  updCam();
+});
+canvas.addEventListener('wheel',e=>{camR=Math.max(1,camR+e.deltaY*.03);updCam();},{passive:true});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+let ld=null;
+canvas.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){drag=true;rclick=false;prev={x:e.touches[0].clientX,y:e.touches[0].clientY};}
+  else if(e.touches.length===2)ld=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+},{passive:true});
+canvas.addEventListener('touchend',()=>{drag=false;ld=null;},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&drag){
+    const dx=e.touches[0].clientX-prev.x,dy=e.touches[0].clientY-prev.y;
+    prev={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    sph.th-=dx*.005;sph.ph=Math.max(.05,Math.min(Math.PI-.05,sph.ph+dy*.005));updCam();
+  }else if(e.touches.length===2){
+    const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(ld){camR=Math.max(1,camR-(d-ld)*.07);updCam();}ld=d;
+  }
+},{passive:true});
+(function loop(){requestAnimationFrame(loop);renderer.render(scene,camera)})();
+
+/* ═══════════════════════════
+   API
+═══════════════════════════ */
+const API='/api/points';
+
+async function apiGet(){
+  const r=await fetch(API);
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+async function apiAdd(p){
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+  if(!r.ok)throw new Error(await r.text());
+  return r.json();
+}
+async function apiDel(id){
+  const r=await fetch(`${API}?id=${id}`,{method:'DELETE'});
+  if(!r.ok)throw new Error(await r.text());
+}
+
+function setStatus(msg,type='loading'){
+  const el=document.getElementById('status');
+  el.textContent=msg;el.className=type;
+}
+
+/* ═══════════════════════════
+   SCENE OBJECTS
+═══════════════════════════ */
+const PALETTE=['#d4450c','#1a6e3c','#1a3d8a','#c9920a','#7b2d8b','#0e7490','#9b1c4e','#3d6b00'];
+let points=[],autoCI=0;
+
+function hexInt(h){return parseInt(h.replace('#','0x'))}
+
+function buildSceneObjects(p){
+  const s=(p.size||4)*.075,c=hexInt(p.color);
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(s,20,20),new THREE.MeshBasicMaterial({color:c}));
+  mesh.position.set(p.v,p.fa,p.g);scene.add(mesh);
+  const lg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p.v,p.fa,p.g),new THREE.Vector3(p.v,0,p.g)]);
+  const line=new THREE.Line(lg,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.3}));
+  scene.add(line);
+  const lc=document.createElement('canvas');lc.width=340;lc.height=80;
+  const ctx=lc.getContext('2d');
+  ctx.font='bold 26px DM Mono,monospace';ctx.fillStyle=p.color;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(p.name||(p.v+','+p.fa+','+p.g),170,40);
+  const lsp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(lc),transparent:true,depthTest:false}));
+  lsp.scale.set(3,.72,1);lsp.position.set(p.v,p.fa+s+.6,p.g);scene.add(lsp);
+  return {mesh,line,lsp};
+}
+function removeSceneObjects(p){
+  scene.remove(p._m);scene.remove(p._l);scene.remove(p._s);
+  p._m.geometry.dispose();p._l.geometry.dispose();
+}
+
+/* ═══════════════════════════
+   CRUD with API
+═══════════════════════════ */
+function setBusy(busy){
+  document.getElementById('btn-add').disabled=busy;
+  document.getElementById('m-add').disabled=busy;
+  document.querySelectorAll('.pt-del').forEach(b=>b.disabled=busy);
+}
+
+async function loadPoints(){
+  setStatus('⏳ загрузка…','loading');
+  try{
+    const data=await apiGet();
+    // clear scene
+    points.forEach(p=>removeSceneObjects(p));
+    points=[];
+    data.forEach(p=>{
+      const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;
+      points.push(p);
+    });
+    autoCI=points.length;
+    setStatus('✓ '+points.length+' точек','ok');
+    renderAll();
+  }catch(e){
+    setStatus('⚠ ошибка БД','err');
+    console.error(e);
+  }
+}
+
+async function addPoint(v,fa,g,name,color,size){
+  setBusy(true);
+  setStatus('⏳ сохраняю…','loading');
+  try{
+    const p=await apiAdd({
+      v,fa,g,
+      name:name||('P'+(points.length+1)),
+      color:color||PALETTE[autoCI++%PALETTE.length],
+      size:size||4
+    });
+    const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;
+    points.push(p);
+    setStatus('✓ сохранено','ok');
+    renderAll();
+  }catch(e){
+    setStatus('⚠ ошибка сохранения','err');
+    console.error(e);
+  }finally{setBusy(false);}
+}
+
+async function delPoint(id){
+  setBusy(true);
+  setStatus('⏳ удаляю…','loading');
+  try{
+    await apiDel(id);
+    const idx=points.findIndex(p=>p.id===id);
+    if(idx!==-1){removeSceneObjects(points[idx]);points.splice(idx,1);}
+    setStatus('✓ удалено','ok');
+    renderAll();
+  }catch(e){
+    setStatus('⚠ ошибка удаления','err');
+    console.error(e);
+  }finally{setBusy(false);}
+}
+
+async function clearAll(){
+  if(!points.length)return;
+  setBusy(true);
+  setStatus('⏳ очищаю…','loading');
+  try{
+    await Promise.all(points.map(p=>apiDel(p.id)));
+    points.forEach(p=>removeSceneObjects(p));
+    points=[];autoCI=0;
+    setStatus('✓ очищено','ok');
+    renderAll();
+  }catch(e){
+    setStatus('⚠ ошибка','err');
+    console.error(e);
+  }finally{setBusy(false);}
+}
+
+/* ═══════════════════════════
+   STATS STATE
+═══════════════════════════ */
+const TABS=[
+  {key:'avg',label:'Среднее',col:'#7b2d8b'},
+  {key:'v',  label:'V (X)',  col:'#d4450c'},
+  {key:'fa', label:'Fₐ (Y)',col:'#1a6e3c'},
+  {key:'g',  label:'G (Z)', col:'#1a3d8a'},
+];
+let dActiveTab='avg',mActiveTab='avg';
+
+/* ═══════════════════════════
+   RENDER UI
+═══════════════════════════ */
+function ptHTML(p){
+  return `<div class="pt-item">
+    <div class="pt-dot" style="background:${p.color}"></div>
+    <div class="pt-info">
+      <div class="pt-name">${p.name}</div>
+      <div class="pt-coords">
+        <s style="color:var(--ax)">V=${p.v}</s>
+        <s style="color:var(--ay)">Fa=${p.fa}</s>
+        <s style="color:var(--az)">G=${p.g}</s>
+      </div>
+    </div>
+    <button class="pt-del" data-id="${p.id}">×</button>
+  </div>`;
+}
+
+function bindDels(root){
+  root.querySelectorAll('.pt-del').forEach(b=>b.addEventListener('click',()=>delPoint(b.dataset.id)));
+}
+
+function renderLists(){
+  const el1=document.getElementById('pts-list');
+  const el2=document.getElementById('m-pts');
+  const html=points.length?points.map(ptHTML).join(''):'<div class="empty">Нет точек</div>';
+  if(el1){el1.innerHTML=html;bindDels(el1);}
+  if(el2){el2.innerHTML=html;bindDels(el2);}
+  document.getElementById('cnt').textContent=points.length;
+  document.getElementById('m-cnt').textContent=points.length;
+}
+
+function rankHTML(activeKey,isMobile){
+  if(!points.length)return'<div class="empty">Добавьте точки</div>';
+  const data=points.map(p=>({...p,avg:+((p.v+p.fa+p.g)/3).toFixed(2)}));
+  const sorted=[...data].sort((a,b)=>b[activeKey]-a[activeKey]);
+  const maxVal=Math.max(...data.map(p=>Math.abs(p[activeKey])))||1;
+  const tab=TABS.find(t=>t.key===activeKey);
+  const medals=['gold','silver','bronze','dim','dim'];
+  const itemClass=isMobile?'mob-ri':'ri';
+  return sorted.slice(0,5).map((p,r)=>{
+    const val=activeKey==='avg'?p.avg:p[activeKey];
+    const pct=Math.max(4,Math.round(Math.abs(val)/maxVal*100));
+    const extra=isMobile?`<div style="font-size:10px;color:var(--muted);margin-top:2px">V=${p.v} · Fa=${p.fa} · G=${p.g}</div>`:'';
+    return `<div class="${itemClass}">
+      <span class="rn ${medals[r]}">${r+1}</span>
+      <span class="rd" style="background:${p.color}"></span>
+      <div style="flex:1;min-width:0"><div class="rname">${p.name}</div>${extra}</div>
+      <div class="rval-wrap">
+        <span class="rval" style="background:${tab.col}">${val}</span>
+        <div class="rbar-wrap"><div class="rbar" style="width:${pct}%;background:${tab.col}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTabBtns(cid,activeKey,onClick){
+  const el=document.getElementById(cid);if(!el)return;
+  el.innerHTML=TABS.map(t=>`<button class="tab-btn${t.key===activeKey?' active':''}"
+    style="${t.key===activeKey?'background:'+t.col+';border-color:'+t.col+';color:#fff':''}"
+    data-key="${t.key}">${t.label}</button>`).join('');
+  el.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>onClick(b.dataset.key)));
+}
+
+function renderDesktopStats(){
+  const sc=document.getElementById('s-cnt');if(sc)sc.textContent=points.length?points.length+' точек':'';
+  renderTabBtns('d-tabs',dActiveTab,k=>{dActiveTab=k;renderDesktopStats();});
+  const el=document.getElementById('d-rank');if(el)el.innerHTML=rankHTML(dActiveTab,false);
+}
+function renderMobileStats(){
+  const sc=document.getElementById('m-s-cnt');if(sc)sc.textContent=points.length?points.length+' точек':'';
+  renderTabBtns('m-tabs',mActiveTab,k=>{mActiveTab=k;renderMobileStats();});
+  const el=document.getElementById('m-rank');if(el)el.innerHTML=rankHTML(mActiveTab,true);
+}
+function renderAll(){renderLists();renderDesktopStats();renderMobileStats();}
+
+/* ═══════════════════════════
+   EVENTS
+═══════════════════════════ */
+document.getElementById('in-sz').addEventListener('input',function(){document.getElementById('size-val').textContent=this.value});
+
+document.getElementById('btn-add').addEventListener('click',()=>{
+  addPoint(
+    parseFloat(document.getElementById('in-v').value)||0,
+    parseFloat(document.getElementById('in-fa').value)||0,
+    parseFloat(document.getElementById('in-g').value)||0,
+    document.getElementById('in-name').value.trim(),
+    document.getElementById('in-col').value,
+    parseInt(document.getElementById('in-sz').value)||4
+  );
+  document.getElementById('in-name').value='';
+});
+
+document.getElementById('m-add').addEventListener('click',()=>{
+  addPoint(
+    parseFloat(document.getElementById('m-v').value)||0,
+    parseFloat(document.getElementById('m-fa').value)||0,
+    parseFloat(document.getElementById('m-g').value)||0,
+    document.getElementById('m-name').value.trim(),
+    document.getElementById('m-col').value,4
+  );
+  document.getElementById('m-name').value='';
+  switchSheetTab('list');
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&['in-v','in-fa','in-g','in-name'].includes(document.activeElement?.id))
+    document.getElementById('btn-add').click();
+});
+
+let panelOn=true,statsOn=false;
+document.getElementById('t-panel').addEventListener('click',()=>{
+  panelOn=!panelOn;
+  document.getElementById('rp').classList.toggle('collapsed',!panelOn);
+  document.getElementById('t-panel').classList.toggle('on',panelOn);
+  setTimeout(resize,280);
+});
+document.getElementById('t-stats').addEventListener('click',()=>{
+  statsOn=!statsOn;
+  document.getElementById('stats').classList.toggle('open',statsOn);
+  document.getElementById('t-stats').textContent=statsOn?'▼ Топ':'▲ Топ';
+  document.getElementById('t-stats').classList.toggle('on',statsOn);
+  if(statsOn)renderDesktopStats();
+  setTimeout(resize,320);
+});
+document.getElementById('t-clear').addEventListener('click',()=>{
+  if(!points.length||confirm('Удалить все '+points.length+' точек?'))clearAll();
+});
+
+function switchSheetTab(tab){
+  document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.sheet-page').forEach(p=>p.classList.toggle('active',p.id==='sp-'+tab));
+  if(tab==='top')renderMobileStats();
+}
+document.querySelectorAll('.stab').forEach(b=>b.addEventListener('click',()=>switchSheetTab(b.dataset.tab)));
+document.getElementById('fab').addEventListener('click',()=>document.getElementById('mob').classList.add('open'));
+document.getElementById('mob').addEventListener('click',e=>{if(e.target===document.getElementById('mob'))document.getElementById('mob').classList.remove('open');});
+
+/* ═══════════════════════════
+   INIT
+═══════════════════════════ */
+loadPoints();
+</script>
+</body>
+</html>
