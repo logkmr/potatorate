@@ -36,11 +36,11 @@ exports.handler = async (event) => {
     // ── POST: add a point ─────────────────────────────
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
-      const { name, v, fa, g, v_pkg, fa_pkg, g_pkg, color, size, photo } = body;
+      const { name, v, fa, g, pkg, comment, color, size, photo } = body;
 
       const { data, error } = await supabase
         .from('points')
-        .insert([{ name, v, fa, g, v_pkg, fa_pkg, g_pkg, color, size, photo }])
+        .insert([{ name, v, fa, g, pkg, comment, color, size, photo }])
         .select()
         .single();
 
@@ -54,11 +54,11 @@ exports.handler = async (event) => {
       if (!id) return { statusCode: 400, headers: HEADERS, body: JSON.stringify({ error: 'Missing id' }) };
 
       const body = JSON.parse(event.body || '{}');
-      const { name, v, fa, g, v_pkg, fa_pkg, g_pkg, color, size, photo } = body;
+      const { name, v, fa, g, pkg, comment, color, size, photo } = body;
 
       const { data, error } = await supabase
         .from('points')
-        .update({ name, v, fa, g, v_pkg, fa_pkg, g_pkg, color, size, photo })
+        .update({ name, v, fa, g, pkg, comment, color, size, photo })
         .eq('id', id)
         .select()
         .single();

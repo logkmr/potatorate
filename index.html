@@ -267,7 +267,18 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
   content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
   border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid var(--border);
 }
-#photo-popup img{width:100%;height:auto;border-radius:6px;display:block;}
+#photo-popup img{width:100%;height:auto;border-radius:6px;display:block;cursor:pointer;}
+#photo-popup img.blurred{filter:blur(8px);}
+#photo-modal{
+  position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.92);
+  display:none;align-items:center;justify-content:center;
+}
+#photo-modal.open{display:flex;}
+#photo-modal img{max-width:90%;max-height:90%;border-radius:8px;}
+#photo-modal .close-btn{
+  position:absolute;top:16px;right:16px;background:none;border:none;
+  color:#fff;font-size:28px;cursor:pointer;padding:8px;
+}
 
 @media(max-width:640px){
 #rp{display:none}
@@ -296,10 +307,13 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
       <canvas id="c"></canvas>
       <div id="hint">ЛКМ — вращение · Колесо — масштаб · ПКМ — панорама</div>
       <label class="pkg-tgl float-tgl">
-        <div class="switch"><input type="checkbox" id="tgl-pkg"><span class="slider"></span></div>
-        С пакетом
+        <div class="switch"><input type="checkbox" id="tgl-blur"><span class="slider"></span></div>
+        Блюр
       </label>
-      <div id="photo-popup"><img id="photo-popup-img" src=""></div>
+      <div id="photo-popup"><img id="photo-popup-img" src="">
+        <button id="photo-full-btn" style="display:block;margin-top:4px;width:100%;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">📺 На весь экран</button>
+      </div>
+      <div id="photo-modal"><button class="close-btn">×</button><img id="photo-modal-img" src=""></div>
     </div>
 
 <div id="rp">
@@ -311,19 +325,19 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
       <div class="field"><label><b class="vy">Vision</b> Y</label><input type="number" id="in-fa" value="0" step="any"></div>
     </div>
     <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="in-g" value="0" step="any"></div>
-
-    <div class="sec-title" style="margin:12px 0 6px">С пакетом</div>
-    <div class="row2">
-      <div class="field"><label><b class="vx">V</b> X</label><input type="number" id="in-vp" value="0" step="any"></div>
-      <div class="field"><label><b class="vy">Vision</b> Y</label><input type="number" id="in-fap" value="0" step="any"></div>
+    <div class="field"><label>Пакет (оценка)</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="range" id="in-pkg" min="1" max="10" value="5" style="flex:1">
+        <span id="pkg-val" style="font-size:13px;color:var(--ax);min-width:16px;text-align:center">5</span>
+      </div>
     </div>
-    <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="in-gp" value="0" step="any"></div>
     <div style="height:8px"></div>
 
-    <div class="row2">
-      <div class="field"><label>Цвет</label><input type="color" id="in-col" value="#d4450c"></div>
-      <div class="field"><label>Размер &nbsp;<span id="size-val">4</span></label><input type="range" id="in-sz" min="1" max="10" value="4"></div>
-    </div>
+<div class="row2">
+        <div class="field"><label>Цвет</label><input type="color" id="m-col" value="#1a3d8a"></div>
+        <div class="field"><label>Комментарий</label><input type="text" id="m-comment" placeholder="Комментарий..." maxlength="200"></div>
+      </div>
+    <div class="field"><label>Комментарий</label><input type="text" id="in-comment" placeholder="Комментарий..." maxlength="200"></div>
     <div class="field">
       <label>Фото (клик по фото = удалить)</label>
       <input type="file" id="in-photo" accept="image/*" style="font-size:10px; margin-bottom:4px">
@@ -375,15 +389,11 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
         <div class="field"><label><b class="vy">Vision</b> Y</label><input type="number" id="m-fa" value="0" step="any"></div>
       </div>
       <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="m-g" value="0" step="any"></div>
-
-      <div class="sec-title" style="margin:12px 0 6px">С пакетом</div>
-      <div class="row2">
-        <div class="field"><label><b class="vx">V</b> X</label><input type="number" id="m-vp" value="0" step="any"></div>
-        <div class="field"><label><b class="vy">Vision</b> Y</label><input type="number" id="m-fap" value="0" step="any"></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="m-gp" value="0" step="any"></div>
-        <div class="field"><label>Цвет</label><input type="color" id="m-col" value="#1a3d8a"></div>
+      <div class="field"><label>Пакет (оценка)</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="m-pkg" min="1" max="10" value="5" style="flex:1">
+          <span id="m-pkg-val" style="font-size:13px;color:var(--ax);min-width:16px;text-align:center">5</span>
+        </div>
       </div>
       <div class="field">
         <label>Фото (клик по фото = удалить)</label>
@@ -458,15 +468,20 @@ window.addEventListener('mouseup',e=>{
       const p = points.find(x=>x._m===mesh);
       if(p && p.photo){
         const pp = document.getElementById('photo-popup');
-        document.getElementById('photo-popup-img').src = p.photo;
+        const img = document.getElementById('photo-popup-img');
+        img.src = p.photo;
+        img.classList.toggle('blurred', blurOn);
         pp.style.left = e.clientX + 'px';
         pp.style.top = e.clientY + 'px';
         pp.style.display = 'block';
+        window._activePhotoPoint = p;
       } else {
         document.getElementById('photo-popup').style.display = 'none';
+        window._activePhotoPoint = null;
       }
     } else {
       document.getElementById('photo-popup').style.display = 'none';
+      window._activePhotoPoint = null;
     }
   }
 });
@@ -477,6 +492,17 @@ window.addEventListener('mousemove',e=>{
   if(!rclick){sph.th-=dx*.005;sph.ph=Math.max(.05,Math.min(Math.PI-.05,sph.ph-dy*.005));}
   else{const r=new THREE.Vector3();r.crossVectors(camera.getWorldDirection(new THREE.Vector3()),camera.up).normalize();tgt.addScaledVector(r,-dx*.015);tgt.addScaledVector(camera.up,dy*.015);}
   updCam();
+  
+  if(window._activePhotoPoint && window._activePhotoPoint._m){
+    const p = window._activePhotoPoint;
+    const vec = p._m.position.clone();
+    vec.project(camera);
+    const x = (vec.x * .5 + .5) * wrap.clientWidth;
+    const y = (-vec.y * .5 + .5) * wrap.clientHeight;
+    const pp = document.getElementById('photo-popup');
+    pp.style.left = x + 'px';
+    pp.style.top = y + 'px';
+  }
 });
 canvas.addEventListener('wheel',e=>{camR=Math.max(1,camR+e.deltaY*.03);updCam();},{passive:true});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -511,11 +537,58 @@ canvas.addEventListener('touchend',e=>{
     } else {
       document.getElementById('photo-popup').style.display = 'none';
     }
+}
+},{"passive":false});
+canvas.addEventListener('touchend',e=>{
+  drag=false;ld=null;
+  if(!wasDragged && e.changedTouches.length===1 && e.target===canvas){
+    const t = e.changedTouches[0];
+    const rect = canvas.getBoundingClientRect();
+    const mouse = new THREE.Vector2(((t.clientX - rect.left) / rect.width) * 2 - 1, -((t.clientY - rect.top) / rect.height) * 2 + 1);
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(mouse, camera);
+    const intersects = rc.intersectObjects(points.map(x=>x._m));
+    if(intersects.length>0){
+      const mesh = intersects[0].object;
+      const p = points.find(x=>x._m===mesh);
+      if(p && p.photo){
+        const pp = document.getElementById('photo-popup');
+        const img = document.getElementById('photo-popup-img');
+        img.src = p.photo;
+        img.classList.toggle('blurred', blurOn);
+        pp.style.left = t.clientX + 'px';
+        pp.style.top = t.clientY + 'px';
+        pp.style.display = 'block';
+        window._activePhotoPoint = p;
+      } else {
+        document.getElementById('photo-popup').style.display = 'none';
+        window._activePhotoPoint = null;
+      }
+    } else {
+      document.getElementById('photo-popup').style.display = 'none';
+      window._activePhotoPoint = null;
+    }
   }
-},{passive:false});
+},{"passive":false});
 canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
   if(e.touches.length===1&&drag){
+    wasDragged=true;
+    const dx=e.touches[0].clientX-prev.x,dy=e.touches[0].clientY-prev.y;
+    prev={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    sph.th-=dx*.005;sph.ph=Math.max(.05,Math.min(Math.PI-.05,sph.ph-dy*.005));updCam();
+    
+    if(window._activePhotoPoint && window._activePhotoPoint._m){
+      const p = window._activePhotoPoint;
+      const vec = p._m.position.clone();
+      vec.project(camera);
+      const x = (vec.x * .5 + .5) * wrap.clientWidth;
+      const y = (-vec.y * .5 + .5) * wrap.clientHeight;
+      const pp = document.getElementById('photo-popup');
+      pp.style.left = x + 'px';
+      pp.style.top = y + 'px';
+    }
+  }else if(e.touches.length===2){
     wasDragged=true;
     const dx=e.touches[0].clientX-prev.x,dy=e.touches[0].clientY-prev.y;
     prev={x:e.touches[0].clientX,y:e.touches[0].clientY};
@@ -561,11 +634,13 @@ function setStatus(msg,type='loading'){
    SCENE OBJECTS
 ═══════════════════════════ */
 const PALETTE=['#d4450c','#1a6e3c','#1a3d8a','#c9920a','#7b2d8b','#0e7490','#9b1c4e','#3d6b00'];
-let points=[],autoCI=0,usePkg=false;
+let points=[],autoCI=0,blurOn=false;
 
-document.getElementById('tgl-pkg').addEventListener('change', e => {
-  usePkg = e.target.checked;
-  updateScenePositions();
+document.getElementById('tgl-blur').addEventListener('change', e => {
+  blurOn = e.target.checked;
+  document.querySelectorAll('#photo-popup img, #in-photo-preview, #m-photo-preview').forEach(img => {
+    img.classList.toggle('blurred', blurOn);
+  });
   renderAll();
 });
 
@@ -573,46 +648,28 @@ function hexInt(h){return parseInt(h.replace('#','0x'))}
 
 function buildSceneObjects(p){
   const s=(p.size||4)*.075,c=hexInt(p.color);
-  const v = usePkg ? (p.v_pkg||0) : p.v;
-  const fa = usePkg ? (p.fa_pkg||0) : p.fa;
-  const g = usePkg ? (p.g_pkg||0) : p.g;
+  const v = p.v||0, fa = p.fa||0, g = p.g||0;
   
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(s,20,20),new THREE.MeshBasicMaterial({color:c}));
   mesh.position.set(v,fa,g);scene.add(mesh);
-  const lg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(v,fa,g),new THREE.Vector3(v,0,g)]);
-  const line=new THREE.Line(lg,new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.3}));
-  scene.add(line);
   const lc=document.createElement('canvas');lc.width=340;lc.height=80;
   const ctx=lc.getContext('2d');
   ctx.font='bold 26px DM Mono,monospace';ctx.fillStyle=p.color;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.fillText(p.name||(v+','+fa+','+g),170,40);
   const lsp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(lc),transparent:true,depthTest:false}));
   lsp.scale.set(3,.72,1);lsp.position.set(v,fa+s+.6,g);scene.add(lsp);
-  return {mesh,line,lsp,s};
+  return {mesh,lsp,s};
 }
 function removeSceneObjects(p){
-  scene.remove(p._m);scene.remove(p._l);scene.remove(p._s);
-  p._m.geometry.dispose();p._l.geometry.dispose();
+  scene.remove(p._m);scene.remove(p._s);
+  p._m.geometry.dispose();
 }
 function updateScenePositions(){
   points.forEach(p => {
-    const v = usePkg ? (p.v_pkg||0) : p.v;
-    const fa = usePkg ? (p.fa_pkg||0) : p.fa;
-    const g = usePkg ? (p.g_pkg||0) : p.g;
-    
-    // update sphere
+    const v = p.v||0, fa = p.fa||0, g = p.g||0;
     p._m.position.set(v, fa, g);
-    
-    // update line
-    const positions = p._l.geometry.attributes.position.array;
-    positions[0] = v; positions[1] = fa; positions[2] = g;
-    positions[3] = v; positions[4] = 0;  positions[5] = g;
-    p._l.geometry.attributes.position.needsUpdate = true;
-    
-    // update text
     p._s.position.set(v, fa + p._s_size + .6, g);
     
-    // recreate text canvas if coords in name
     if (!p.name) {
       const lc=document.createElement('canvas');lc.width=340;lc.height=80;
       const ctx=lc.getContext('2d');
@@ -638,11 +695,10 @@ async function loadPoints(){
   setStatus('⏳ загрузка…','loading');
   try{
     const data=await apiGet();
-    // clear scene
     points.forEach(p=>removeSceneObjects(p));
     points=[];
     data.forEach(p=>{
-      const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;p._s_size=o.s;
+      const o=buildSceneObjects(p);p._m=o.mesh;p._s=o.lsp;p._s_size=o.s;
       points.push(p);
     });
     autoCI=points.length;
@@ -656,16 +712,16 @@ async function loadPoints(){
 
 let editId = null;
 
-async function addPoint(v,fa,g,v_pkg,fa_pkg,g_pkg,name,color,size,photo){
+async function addPoint(v,fa,g,pkg,comment,name,color,size,photo){
   setBusy(true);
   setStatus('⏳ сохраняю…','loading');
   try{
     if(editId) {
-      const p=await apiUpdate(editId, {v,fa,g,v_pkg,fa_pkg,g_pkg,name:name||('P'+points.length),color:color||PALETTE[autoCI%PALETTE.length],size:size||4,photo});
+      const p=await apiUpdate(editId, {v,fa,g,pkg,comment,name:name||('P'+points.length),color:color||PALETTE[autoCI%PALETTE.length],size:size||4,photo});
       const idx=points.findIndex(x=>x.id===editId);
       if(idx!==-1){
         removeSceneObjects(points[idx]);
-        const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;p._s_size=o.s;
+        const o=buildSceneObjects(p);p._m=o.mesh;p._s=o.lsp;p._s_size=o.s;
         points[idx]=p;
       }
       setStatus('✓ обновлено','ok');
@@ -676,17 +732,16 @@ async function addPoint(v,fa,g,v_pkg,fa_pkg,g_pkg,name,color,size,photo){
       document.getElementById('m-add-title').textContent = 'Новая точка';
     } else {
       const p=await apiAdd({
-        v,fa,g,v_pkg,fa_pkg,g_pkg,photo,
+        v,fa,g,pkg,comment,photo,
         name:name||('P'+(points.length+1)),
         color:color||PALETTE[autoCI++%PALETTE.length],
         size:size||4
       });
-      const o=buildSceneObjects(p);p._m=o.mesh;p._l=o.line;p._s=o.lsp;p._s_size=o.s;
+      const o=buildSceneObjects(p);p._m=o.mesh;p._s=o.lsp;p._s_size=o.s;
       points.push(p);
       setStatus('✓ сохранено','ok');
     }
     
-    // reset photo states
     dPhotoBase64=''; mPhotoBase64='';
     document.getElementById('in-photo-preview').style.display='none';
     document.getElementById('m-photo-preview').style.display='none';
@@ -730,6 +785,7 @@ const TABS=[
   {key:'v',  label:'V (X)',     col:'#d4450c'},
   {key:'fa', label:'Vision (Y)',col:'#1a6e3c'},
   {key:'g',  label:'G (Z)',     col:'#1a3d8a'},
+  {key:'pkg',label:'Пакет',    col:'#c9920a'},
 ];
 let dActiveTab='avg',mActiveTab='avg';
 
@@ -737,9 +793,7 @@ let dActiveTab='avg',mActiveTab='avg';
    RENDER UI
 ═══════════════════════════ */
 function ptHTML(p){
-  const v = usePkg ? (p.v_pkg||0) : p.v;
-  const fa = usePkg ? (p.fa_pkg||0) : p.fa;
-  const g = usePkg ? (p.g_pkg||0) : p.g;
+  const v = p.v||0, fa = p.fa||0, g = p.g||0, pkg = p.pkg||0;
   return `<div class="pt-item">
     <div class="pt-dot" style="background:${p.color}"></div>
     <div class="pt-info">
@@ -748,7 +802,9 @@ function ptHTML(p){
         <s style="color:var(--ax)">V=${v}</s>
         <s style="color:var(--ay)">Vision=${fa}</s>
         <s style="color:var(--az)">G=${g}</s>
+        <s style="color:var(--aavg)">Пакет=${pkg}</s>
       </div>
+      ${p.comment ? `<div class="pt-comment" style="font-size:10px;color:var(--muted);margin-top:3px">${p.comment}</div>` : ''}
     </div>
     <button class="pt-edit" data-id="${p.id}">✎</button>
     <button class="pt-del" data-id="${p.id}">×</button>
@@ -765,9 +821,9 @@ function startEdit(id){
   document.getElementById('in-v').value = p.v;
   document.getElementById('in-fa').value = p.fa;
   document.getElementById('in-g').value = p.g;
-  document.getElementById('in-vp').value = p.v_pkg || 0;
-  document.getElementById('in-fap').value = p.fa_pkg || 0;
-  document.getElementById('in-gp').value = p.g_pkg || 0;
+  document.getElementById('in-pkg').value = p.pkg || 5;
+  document.getElementById('pkg-val').textContent = p.pkg || 5;
+  document.getElementById('in-comment').value = p.comment || '';
   document.getElementById('in-col').value = p.color;
   document.getElementById('in-sz').value = p.size || 4;
   document.getElementById('size-val').textContent = p.size || 4;
@@ -776,8 +832,10 @@ function startEdit(id){
   
   if(p.photo) {
     dPhotoBase64 = p.photo;
-    document.getElementById('in-photo-preview').src = p.photo;
-    document.getElementById('in-photo-preview').style.display = 'block';
+    const img = document.getElementById('in-photo-preview');
+    img.src = p.photo;
+    img.classList.toggle('blurred', blurOn);
+    img.style.display = 'block';
   } else {
     dPhotoBase64 = '';
     document.getElementById('in-photo-preview').style.display = 'none';
@@ -789,17 +847,19 @@ function startEdit(id){
   document.getElementById('m-v').value = p.v;
   document.getElementById('m-fa').value = p.fa;
   document.getElementById('m-g').value = p.g;
-  document.getElementById('m-vp').value = p.v_pkg || 0;
-  document.getElementById('m-fap').value = p.fa_pkg || 0;
-  document.getElementById('m-gp').value = p.g_pkg || 0;
+  document.getElementById('m-pkg').value = p.pkg || 5;
+  document.getElementById('m-pkg-val').textContent = p.pkg || 5;
+  document.getElementById('m-comment').value = p.comment || '';
   document.getElementById('m-col').value = p.color;
   document.getElementById('m-add').textContent = '✓ Сохранить точку';
   document.getElementById('m-add-title').textContent = 'Редактировать точку';
 
   if(p.photo) {
     mPhotoBase64 = p.photo;
-    document.getElementById('m-photo-preview').src = p.photo;
-    document.getElementById('m-photo-preview').style.display = 'block';
+    const img = document.getElementById('m-photo-preview');
+    img.src = p.photo;
+    img.classList.toggle('blurred', blurOn);
+    img.style.display = 'block';
   } else {
     mPhotoBase64 = '';
     document.getElementById('m-photo-preview').style.display = 'none';
@@ -832,10 +892,8 @@ function renderLists(){
 function rankHTML(activeKey,isMobile){
   if(!points.length)return'<div class="empty">Добавьте точки</div>';
   const data=points.map(p=>{
-    const v = usePkg ? (p.v_pkg||0) : p.v;
-    const fa = usePkg ? (p.fa_pkg||0) : p.fa;
-    const g = usePkg ? (p.g_pkg||0) : p.g;
-    return {...p, v, fa, g, avg:+((v+fa+g)/3).toFixed(2)};
+    const v = p.v||0, fa = p.fa||0, g = p.g||0, pkg = p.pkg||0;
+    return {...p, v, fa, g, pkg, avg:+((v+fa+g+pkg)/4).toFixed(2)};
   });
   const sorted=[...data].sort((a,b)=>b[activeKey]-a[activeKey]);
   const maxVal=Math.max(...data.map(p=>Math.abs(p[activeKey])))||1;
@@ -845,7 +903,7 @@ function rankHTML(activeKey,isMobile){
   return sorted.map((p,r)=>{
     const val=activeKey==='avg'?p.avg:p[activeKey];
     const pct=Math.max(4,Math.round(Math.abs(val)/maxVal*100));
-    const extra=isMobile?`<div style="font-size:10px;color:var(--muted);margin-top:2px">V=${p.v} · Vision=${p.fa} · G=${p.g}</div>`:'';
+    const extra=isMobile?`<div style="font-size:10px;color:var(--muted);margin-top:2px">V=${p.v} · Vision=${p.fa} · G=${p.g} · Пакет=${p.pkg}</div>`:'';
     const medalClass = r < 5 ? medals[r] : 'dim';
     return `<div class="${itemClass}">
       <span class="rn ${medalClass}">${r+1}</span>
@@ -919,21 +977,22 @@ setupPhotoInput('in-photo', 'in-photo-preview', ()=>dPhotoBase64, v=>dPhotoBase6
 setupPhotoInput('m-photo', 'm-photo-preview', ()=>mPhotoBase64, v=>mPhotoBase64=v);
 
 document.getElementById('in-sz').addEventListener('input',function(){document.getElementById('size-val').textContent=this.value});
+document.getElementById('in-pkg').addEventListener('input',function(){document.getElementById('pkg-val').textContent=this.value});
 
 document.getElementById('btn-add').addEventListener('click',()=>{
   addPoint(
     parseFloat(document.getElementById('in-v').value)||0,
     parseFloat(document.getElementById('in-fa').value)||0,
     parseFloat(document.getElementById('in-g').value)||0,
-    parseFloat(document.getElementById('in-vp').value)||0,
-    parseFloat(document.getElementById('in-fap').value)||0,
-    parseFloat(document.getElementById('in-gp').value)||0,
+    parseInt(document.getElementById('in-pkg').value)||5,
+    document.getElementById('in-comment').value.trim(),
     document.getElementById('in-name').value.trim(),
     document.getElementById('in-col').value,
     parseInt(document.getElementById('in-sz').value)||4,
     dPhotoBase64
   );
   document.getElementById('in-name').value='';
+  document.getElementById('in-comment').value='';
 });
 
 document.getElementById('m-add').addEventListener('click',()=>{
@@ -941,14 +1000,15 @@ document.getElementById('m-add').addEventListener('click',()=>{
     parseFloat(document.getElementById('m-v').value)||0,
     parseFloat(document.getElementById('m-fa').value)||0,
     parseFloat(document.getElementById('m-g').value)||0,
-    parseFloat(document.getElementById('m-vp').value)||0,
-    parseFloat(document.getElementById('m-fap').value)||0,
-    parseFloat(document.getElementById('m-gp').value)||0,
+    parseInt(document.getElementById('m-pkg').value)||5,
+    document.getElementById('m-comment').value.trim(),
     document.getElementById('m-name').value.trim(),
-    document.getElementById('m-col').value,4,
+    document.getElementById('m-col').value,
+    4,
     mPhotoBase64
   );
   document.getElementById('m-name').value='';
+  document.getElementById('m-comment').value='';
   switchSheetTab('list');
 });
 
@@ -991,9 +1051,23 @@ document.querySelectorAll('.mn-btn').forEach(b=>b.addEventListener('click',()=> 
 }));
 document.getElementById('mob').addEventListener('click',e=>{if(e.target===document.getElementById('mob'))document.getElementById('mob').classList.remove('open');});
 
+document.getElementById('photo-full-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  const src = document.getElementById('photo-popup-img').src;
+  if(src){
+    document.getElementById('photo-modal-img').src = src;
+    document.getElementById('photo-modal').classList.add('open');
+  }
+});
+document.getElementById('photo-modal').addEventListener('click',e=>{
+  if(e.target.id === 'photo-modal' || e.target.classList.contains('close-btn')){
+    document.getElementById('photo-modal').classList.remove('open');
+  }
+});
+
 /* ═══════════════════════════
    INIT
-═══════════════════════════ */
+══════════════════════════ */
 loadPoints();
 </script>
 
