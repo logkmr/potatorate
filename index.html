@@ -176,6 +176,17 @@ background:var(--surface);border:1px solid var(--border);
 border-radius:20px;padding:4px 12px;pointer-events:none;opacity:.75;
 }
 
+#loading-overlay{
+  position:absolute;inset:0;z-index:25;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+}
+#loading-overlay.hidden{display:none}
+#loading-overlay .potato-spin{
+  font-size:64px;animation:potatoRotate .8s linear infinite;
+}
+@keyframes potatoRotate{to{transform:rotate(360deg)}}
+
 /* FAB */
 #fab{
 display:none;position:fixed;bottom:20px;right:16px;z-index:30;
@@ -317,6 +328,7 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
         <div class="switch"><input type="checkbox" id="tgl-blur"><span class="slider"></span></div>
         Блюр
       </label>
+      <div id="loading-overlay"><div class="potato-spin">🥔</div></div>
       <div id="photo-popup">
         <div class="pt-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:11px;margin-bottom:4px"></div>
         <div class="pt-info-line"></div>
@@ -646,7 +658,14 @@ async function apiDel(id){
 
 function setStatus(msg,type='loading'){
   const el=document.getElementById('status');
-  el.textContent=msg;el.className=type;
+  const ov=document.getElementById('loading-overlay');
+  if(type==='loading'){
+    el.textContent='⏳ загрузка…';el.className='loading';
+    if(ov)ov.classList.remove('hidden');
+  }else{
+    el.textContent=msg;el.className=type;
+    if(ov)ov.classList.add('hidden');
+  }
 }
 
 /* ═══════════════════════════
@@ -995,7 +1014,19 @@ function setupPhotoInput(inputId, imgId, getCb, setCb){
 setupPhotoInput('in-photo', 'in-photo-preview', ()=>dPhotoBase64, v=>dPhotoBase64=v);
 setupPhotoInput('m-photo', 'm-photo-preview', ()=>mPhotoBase64, v=>mPhotoBase64=v);
 
-document.getElementById('in-sz').addEventListener('input',function(){document.getElementById('size-val').textContent=this.value});
+document.getElementById('in-sz').addEventListener('input',function(){
+  document.getElementById('size-val').textContent=this.value;
+  if(editId){
+    const p=points.find(x=>x.id===editId);
+    if(p){
+      const s=parseInt(this.value)*.075;
+      p._m.geometry.dispose();
+      p._m.geometry=new THREE.SphereGeometry(s,20,20);
+      p._s.position.set(p.v||0,(p.fa||0)+s+.6,p.g||0);
+      p._s_size=s/.075;
+    }
+  }
+});
 document.getElementById('in-pkg').addEventListener('input',function(){document.getElementById('pkg-val').textContent=this.value});
 document.getElementById('m-pkg').addEventListener('input',function(){document.getElementById('m-pkg-val').textContent=this.value});
 
@@ -1024,7 +1055,7 @@ document.getElementById('m-add').addEventListener('click',()=>{
     document.getElementById('m-comment').value.trim(),
     document.getElementById('m-name').value.trim(),
     document.getElementById('m-col').value,
-    4,
+    parseInt(document.getElementById('m-sz').value)||4,
     mPhotoBase64
   );
   document.getElementById('m-name').value='';
