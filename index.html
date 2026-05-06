@@ -325,19 +325,17 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
       <div class="field"><label><b class="vy">Vision</b> Y</label><input type="number" id="in-fa" value="0" step="any"></div>
     </div>
     <div class="field"><label><b class="vz">G</b> Z</label><input type="number" id="in-g" value="0" step="any"></div>
-    <div class="field"><label>Пакет (оценка)</label>
+<div class="field"><label>Пакет (оценка)</label>
       <div style="display:flex;align-items:center;gap:8px">
         <input type="range" id="in-pkg" min="1" max="10" value="5" style="flex:1">
         <span id="pkg-val" style="font-size:13px;color:var(--ax);min-width:16px;text-align:center">5</span>
       </div>
     </div>
-    <div style="height:8px"></div>
-
-<div class="row2">
-        <div class="field"><label>Цвет</label><input type="color" id="m-col" value="#1a3d8a"></div>
-        <div class="field"><label>Комментарий</label><input type="text" id="m-comment" placeholder="Комментарий..." maxlength="200"></div>
-      </div>
     <div class="field"><label>Комментарий</label><input type="text" id="in-comment" placeholder="Комментарий..." maxlength="200"></div>
+    <div class="row2">
+      <div class="field"><label>Цвет</label><input type="color" id="in-col" value="#d4450c"></div>
+      <div class="field"><label>Размер &nbsp;<span id="size-val">4</span></label><input type="range" id="in-sz" min="1" max="10" value="4"></div>
+    </div>
     <div class="field">
       <label>Фото (клик по фото = удалить)</label>
       <input type="file" id="in-photo" accept="image/*" style="font-size:10px; margin-bottom:4px">
@@ -394,6 +392,11 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
           <input type="range" id="m-pkg" min="1" max="10" value="5" style="flex:1">
           <span id="m-pkg-val" style="font-size:13px;color:var(--ax);min-width:16px;text-align:center">5</span>
         </div>
+      </div>
+      <div class="field"><label>Комментарий</label><input type="text" id="m-comment" placeholder="Комментарий..." maxlength="200"></div>
+      <div class="row2">
+        <div class="field"><label>Цвет</label><input type="color" id="m-col" value="#1a3d8a"></div>
+        <div class="field"><label>Размер</label><input type="range" id="m-sz" min="1" max="10" value="4"></div>
       </div>
       <div class="field">
         <label>Фото (клик по фото = удалить)</label>
