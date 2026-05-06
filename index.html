@@ -632,7 +632,13 @@ canvas.addEventListener('touchmove',e=>{
     }
   }else if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    if(ld){camR=Math.max(1,camR-(d-ld)*.07);updCam();}ld=d;
+    if(ld){camR=Math.max(1,camR-(d-ld)*.07);updCam();
+      if(window._activePhotoPoint && window._activePhotoPoint._m){
+        const p=window._activePhotoPoint;const vec=p._m.position.clone();vec.project(camera);
+        const x=(vec.x*.5+.5)*wrap.clientWidth,y=(-vec.y*.5+.5)*wrap.clientHeight;
+        const pp=document.getElementById('photo-popup');pp.style.left=x+'px';pp.style.top=y+'px';
+      }
+    }ld=d;
   }
 },{passive:false});
 (function loop(){requestAnimationFrame(loop);renderer.render(scene,camera)})();
