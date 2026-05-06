@@ -550,7 +550,13 @@ window.addEventListener('mousemove',e=>{
     pp.style.top = y + 'px';
   }
 });
-canvas.addEventListener('wheel',e=>{camR=Math.max(1,camR+e.deltaY*.03);updCam();},{passive:true});
+canvas.addEventListener('wheel',e=>{camR=Math.max(1,camR+e.deltaY*.03);updCam();
+  if(window._activePhotoPoint && window._activePhotoPoint._m){
+    const p=window._activePhotoPoint;const vec=p._m.position.clone();vec.project(camera);
+    const x=(vec.x*.5+.5)*wrap.clientWidth,y=(-vec.y*.5+.5)*wrap.clientHeight;
+    document.getElementById('photo-popup').style.left=x+'px';document.getElementById('photo-popup').style.top=y+'px';
+  }
+},{passive:true});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 let ld=null;
 canvas.addEventListener('touchstart',e=>{
