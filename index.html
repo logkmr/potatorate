@@ -268,9 +268,9 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
   border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid var(--border);
 }
 #photo-popup img{width:100%;height:auto;border-radius:6px;display:block;}
-#photo-popup img.blurred{filter:blur(24px);}
+#photo-popup img.blurred,img.blurred{filter:blur(24px);}
 #photo-popup .pt-info-line{display:flex;gap:4px;margin:6px 0;font-size:9px;flex-wrap:wrap}
-#photo-popup .pt-info-line s{padding:1px 4px;border-radius:3px;background:var(--surface2)}
+#photo-popup .pt-info-line span{padding:1px 4px;border-radius:3px;background:var(--surface2)}
 #photo-popup .pt-comment{font-size:9px;color:var(--muted);margin:4px 0;border-top:1px solid var(--border);padding-top:4px}
 #photo-popup .pt-actions{display:flex;gap:4px;margin-top:6px}
 #photo-popup .pt-actions button{flex:1;padding:5px;font-size:9px;border-radius:4px;cursor:pointer}
@@ -493,7 +493,7 @@ window.addEventListener('mouseup',e=>{
         const commentEl = pp.querySelector('.pt-comment');
         
         nameEl.textContent = p.name;
-        infoEl.innerHTML = `<s style="color:var(--ax)">V=${p.v||0}</s><s style="color:var(--ay)">Vision=${p.fa||0}</s><s style="color:var(--az)">G=${p.g||0}</s><s style="color:var(--aavg)">Пакет=${p.pkg||5}</s>`;
+        infoEl.innerHTML = `<span style="color:var(--ax)">V=${p.v||0}</span><span style="color:var(--ay)">Vision=${p.fa||0}</span><span style="color:var(--az)">G=${p.g||0}</span><span style="color:var(--aavg)">Пакет=${p.pkg||5}</span>`;
         
         if(p.photo){
           img.src = p.photo;
@@ -568,54 +568,7 @@ const mouse = new THREE.Vector2(((t.clientX - rect.left) / rect.width) * 2 - 1, 
         const commentEl = pp.querySelector('.pt-comment');
         
         nameEl.textContent = p.name;
-        infoEl.innerHTML = `<s style="color:var(--ax)">V=${p.v||0}</s><s style="color:var(--ay)">Vision=${p.fa||0}</s><s style="color:var(--az)">G=${p.g||0}</s><s style="color:var(--aavg)">Пакет=${p.pkg||5}</s>`;
-        
-        if(p.photo){
-          img.src = p.photo;
-          img.classList.toggle('blurred', blurOn);
-          img.style.display = 'block';
-          fullBtn.style.display = 'block';
-        } else {
-          img.style.display = 'none';
-          fullBtn.style.display = 'none';
-        }
-        
-        commentEl.textContent = p.comment || '';
-        commentEl.style.display = p.comment ? 'block' : 'none';
-        
-        pp.style.left = t.clientX + 'px';
-        pp.style.top = t.clientY + 'px';
-        pp.style.display = 'block';
-        window._activePhotoPoint = p;
-      }
-    } else {
-      document.getElementById('photo-popup').style.display = 'none';
-      window._activePhotoPoint = null;
-    }
-  }
-},{"passive":false});
-canvas.addEventListener('touchend',e=>{
-  drag=false;ld=null;
-  if(!wasDragged && e.changedTouches.length===1 && e.target===canvas){
-    const t = e.changedTouches[0];
-    const rect = canvas.getBoundingClientRect();
-    const mouse = new THREE.Vector2(((t.clientX - rect.left) / rect.width) * 2 - 1, -((t.clientY - rect.top) / rect.height) * 2 + 1);
-    const rc = new THREE.Raycaster();
-    rc.setFromCamera(mouse, camera);
-    const intersects = rc.intersectObjects(points.map(x=>x._m));
-    if(intersects.length>0){
-      const mesh = intersects[0].object;
-      const p = points.find(x=>x._m===mesh);
-      if(p){
-        const pp = document.getElementById('photo-popup');
-        const nameEl = pp.querySelector('.pt-name');
-        const infoEl = pp.querySelector('.pt-info-line');
-        const img = document.getElementById('photo-popup-img');
-        const fullBtn = document.getElementById('photo-full-btn');
-        const commentEl = pp.querySelector('.pt-comment');
-        
-        nameEl.textContent = p.name;
-        infoEl.innerHTML = `<s style="color:var(--ax)">V=${p.v||0}</s><s style="color:var(--ay)">Vision=${p.fa||0}</s><s style="color:var(--az)">G=${p.g||0}</s><s style="color:var(--aavg)">Пакет=${p.pkg||5}</s>`;
+        infoEl.innerHTML = `<span style="color:var(--ax)">V=${p.v||0}</span><span style="color:var(--ay)">Vision=${p.fa||0}</span><span style="color:var(--az)">G=${p.g||0}</span><span style="color:var(--aavg)">Пакет=${p.pkg||5}</span>`;
         
         if(p.photo){
           img.src = p.photo;
@@ -659,11 +612,6 @@ canvas.addEventListener('touchmove',e=>{
       pp.style.left = x + 'px';
       pp.style.top = y + 'px';
     }
-  }else if(e.touches.length===2){
-    wasDragged=true;
-    const dx=e.touches[0].clientX-prev.x,dy=e.touches[0].clientY-prev.y;
-    prev={x:e.touches[0].clientX,y:e.touches[0].clientY};
-    sph.th-=dx*.005;sph.ph=Math.max(.05,Math.min(Math.PI-.05,sph.ph-dy*.005));updCam();
   }else if(e.touches.length===2){
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
     if(ld){camR=Math.max(1,camR-(d-ld)*.07);updCam();}ld=d;
@@ -1049,6 +997,7 @@ setupPhotoInput('m-photo', 'm-photo-preview', ()=>mPhotoBase64, v=>mPhotoBase64=
 
 document.getElementById('in-sz').addEventListener('input',function(){document.getElementById('size-val').textContent=this.value});
 document.getElementById('in-pkg').addEventListener('input',function(){document.getElementById('pkg-val').textContent=this.value});
+document.getElementById('m-pkg').addEventListener('input',function(){document.getElementById('m-pkg-val').textContent=this.value});
 
 document.getElementById('btn-add').addEventListener('click',()=>{
   addPoint(
