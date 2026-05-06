@@ -267,8 +267,15 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
   content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
   border-left:6px solid transparent;border-right:6px solid transparent;border-top:6px solid var(--border);
 }
-#photo-popup img{width:100%;height:auto;border-radius:6px;display:block;cursor:pointer;}
-#photo-popup img.blurred{filter:blur(8px);}
+#photo-popup img{width:100%;height:auto;border-radius:6px;display:block;}
+#photo-popup img.blurred{filter:blur(24px);}
+#photo-popup .pt-info-line{display:flex;gap:4px;margin:6px 0;font-size:9px;flex-wrap:wrap}
+#photo-popup .pt-info-line s{padding:1px 4px;border-radius:3px;background:var(--surface2)}
+#photo-popup .pt-comment{font-size:9px;color:var(--muted);margin:4px 0;border-top:1px solid var(--border);padding-top:4px}
+#photo-popup .pt-actions{display:flex;gap:4px;margin-top:6px}
+#photo-popup .pt-actions button{flex:1;padding:5px;font-size:9px;border-radius:4px;cursor:pointer}
+#photo-popup .pt-edit-btn{background:var(--ay);color:#fff;border:none;}
+#photo-popup .pt-del-btn{background:none;border:1px solid var(--err);color:var(--err)}
 #photo-modal{
   position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.92);
   display:none;align-items:center;justify-content:center;
@@ -310,8 +317,16 @@ background:var(--surface2);border:1.5px solid var(--border);animation:fi .18s ea
         <div class="switch"><input type="checkbox" id="tgl-blur"><span class="slider"></span></div>
         Блюр
       </label>
-      <div id="photo-popup"><img id="photo-popup-img" src="">
-        <button id="photo-full-btn" style="display:block;margin-top:4px;width:100%;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">📺 На весь экран</button>
+      <div id="photo-popup">
+        <div class="pt-name" style="font-family:'Syne',sans-serif;font-weight:800;font-size:11px;margin-bottom:4px"></div>
+        <div class="pt-info-line"></div>
+        <img id="photo-popup-img" src="" style="display:none">
+        <button id="photo-full-btn" style="display:none;width:100%;margin-top:4px;padding:4px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;font-size:10px;cursor:pointer">📺 На весь экран</button>
+        <div class="pt-comment"></div>
+        <div class="pt-actions">
+          <button class="pt-edit-btn">✎ Редактировать</button>
+          <button class="pt-del-btn">× Удалить</button>
+        </div>
       </div>
       <div id="photo-modal"><button class="close-btn">×</button><img id="photo-modal-img" src=""></div>
     </div>
@@ -469,18 +484,34 @@ window.addEventListener('mouseup',e=>{
     if(intersects.length>0){
       const mesh = intersects[0].object;
       const p = points.find(x=>x._m===mesh);
-      if(p && p.photo){
+      if(p){
         const pp = document.getElementById('photo-popup');
+        const nameEl = pp.querySelector('.pt-name');
+        const infoEl = pp.querySelector('.pt-info-line');
         const img = document.getElementById('photo-popup-img');
-        img.src = p.photo;
-        img.classList.toggle('blurred', blurOn);
+        const fullBtn = document.getElementById('photo-full-btn');
+        const commentEl = pp.querySelector('.pt-comment');
+        
+        nameEl.textContent = p.name;
+        infoEl.innerHTML = `<s style="color:var(--ax)">V=${p.v||0}</s><s style="color:var(--ay)">Vision=${p.fa||0}</s><s style="color:var(--az)">G=${p.g||0}</s><s style="color:var(--aavg)">Пакет=${p.pkg||5}</s>`;
+        
+        if(p.photo){
+          img.src = p.photo;
+          img.classList.toggle('blurred', blurOn);
+          img.style.display = 'block';
+          fullBtn.style.display = 'block';
+        } else {
+          img.style.display = 'none';
+          fullBtn.style.display = 'none';
+        }
+        
+        commentEl.textContent = p.comment || '';
+        commentEl.style.display = p.comment ? 'block' : 'none';
+        
         pp.style.left = e.clientX + 'px';
         pp.style.top = e.clientY + 'px';
         pp.style.display = 'block';
         window._activePhotoPoint = p;
-      } else {
-        document.getElementById('photo-popup').style.display = 'none';
-        window._activePhotoPoint = null;
       }
     } else {
       document.getElementById('photo-popup').style.display = 'none';
@@ -521,26 +552,47 @@ canvas.addEventListener('touchend',e=>{
   if(!wasDragged && e.changedTouches.length===1 && e.target===canvas){
     const t = e.changedTouches[0];
     const rect = canvas.getBoundingClientRect();
-    const mouse = new THREE.Vector2(((t.clientX - rect.left) / rect.width) * 2 - 1, -((t.clientY - rect.top) / rect.height) * 2 + 1);
+const mouse = new THREE.Vector2(((t.clientX - rect.left) / rect.width) * 2 - 1, -((t.clientY - rect.top) / rect.height) * 2 + 1);
     const rc = new THREE.Raycaster();
     rc.setFromCamera(mouse, camera);
     const intersects = rc.intersectObjects(points.map(x=>x._m));
     if(intersects.length>0){
       const mesh = intersects[0].object;
       const p = points.find(x=>x._m===mesh);
-      if(p && p.photo){
+      if(p){
         const pp = document.getElementById('photo-popup');
-        document.getElementById('photo-popup-img').src = p.photo;
+        const nameEl = pp.querySelector('.pt-name');
+        const infoEl = pp.querySelector('.pt-info-line');
+        const img = document.getElementById('photo-popup-img');
+        const fullBtn = document.getElementById('photo-full-btn');
+        const commentEl = pp.querySelector('.pt-comment');
+        
+        nameEl.textContent = p.name;
+        infoEl.innerHTML = `<s style="color:var(--ax)">V=${p.v||0}</s><s style="color:var(--ay)">Vision=${p.fa||0}</s><s style="color:var(--az)">G=${p.g||0}</s><s style="color:var(--aavg)">Пакет=${p.pkg||5}</s>`;
+        
+        if(p.photo){
+          img.src = p.photo;
+          img.classList.toggle('blurred', blurOn);
+          img.style.display = 'block';
+          fullBtn.style.display = 'block';
+        } else {
+          img.style.display = 'none';
+          fullBtn.style.display = 'none';
+        }
+        
+        commentEl.textContent = p.comment || '';
+        commentEl.style.display = p.comment ? 'block' : 'none';
+        
         pp.style.left = t.clientX + 'px';
         pp.style.top = t.clientY + 'px';
         pp.style.display = 'block';
-      } else {
-        document.getElementById('photo-popup').style.display = 'none';
+        window._activePhotoPoint = p;
       }
     } else {
       document.getElementById('photo-popup').style.display = 'none';
+      window._activePhotoPoint = null;
     }
-}
+  }
 },{"passive":false});
 canvas.addEventListener('touchend',e=>{
   drag=false;ld=null;
@@ -554,18 +606,34 @@ canvas.addEventListener('touchend',e=>{
     if(intersects.length>0){
       const mesh = intersects[0].object;
       const p = points.find(x=>x._m===mesh);
-      if(p && p.photo){
+      if(p){
         const pp = document.getElementById('photo-popup');
+        const nameEl = pp.querySelector('.pt-name');
+        const infoEl = pp.querySelector('.pt-info-line');
         const img = document.getElementById('photo-popup-img');
-        img.src = p.photo;
-        img.classList.toggle('blurred', blurOn);
+        const fullBtn = document.getElementById('photo-full-btn');
+        const commentEl = pp.querySelector('.pt-comment');
+        
+        nameEl.textContent = p.name;
+        infoEl.innerHTML = `<s style="color:var(--ax)">V=${p.v||0}</s><s style="color:var(--ay)">Vision=${p.fa||0}</s><s style="color:var(--az)">G=${p.g||0}</s><s style="color:var(--aavg)">Пакет=${p.pkg||5}</s>`;
+        
+        if(p.photo){
+          img.src = p.photo;
+          img.classList.toggle('blurred', blurOn);
+          img.style.display = 'block';
+          fullBtn.style.display = 'block';
+        } else {
+          img.style.display = 'none';
+          fullBtn.style.display = 'none';
+        }
+        
+        commentEl.textContent = p.comment || '';
+        commentEl.style.display = p.comment ? 'block' : 'none';
+        
         pp.style.left = t.clientX + 'px';
         pp.style.top = t.clientY + 'px';
         pp.style.display = 'block';
         window._activePhotoPoint = p;
-      } else {
-        document.getElementById('photo-popup').style.display = 'none';
-        window._activePhotoPoint = null;
       }
     } else {
       document.getElementById('photo-popup').style.display = 'none';
@@ -1065,6 +1133,21 @@ document.getElementById('photo-full-btn').addEventListener('click',e=>{
 document.getElementById('photo-modal').addEventListener('click',e=>{
   if(e.target.id === 'photo-modal' || e.target.classList.contains('close-btn')){
     document.getElementById('photo-modal').classList.remove('open');
+  }
+});
+
+document.querySelector('.pt-edit-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(window._activePhotoPoint){
+    startEdit(window._activePhotoPoint.id);
+    document.getElementById('photo-popup').style.display = 'none';
+  }
+});
+document.querySelector('.pt-del-btn').addEventListener('click',e=>{
+  e.stopPropagation();
+  if(window._activePhotoPoint && confirm('Удалить эту точку?')){
+    delPoint(window._activePhotoPoint.id);
+    document.getElementById('photo-popup').style.display = 'none';
   }
 });
 
